@@ -199,7 +199,7 @@ public class MainActivity extends AppCompatActivity {
 
     void ShowBanner()
     {
-        JamboxAdsHelper.ShowBannerAd(JamboxAdsHelper.BannerPosition.TOP);
+        JamboxAdsHelper.ShowBannerAdLayout(findViewById(R.id.banner_ads));
     }
 
     void HideBanner()
@@ -227,7 +227,7 @@ public class MainActivity extends AppCompatActivity {
 
     void ShowIS()
     {
-        JamboxAdsHelper.ShowRewarded(null);
+        JamboxAdsHelper.ShowInterstitial(null,2);
     }
 
     protected void onResume() {
