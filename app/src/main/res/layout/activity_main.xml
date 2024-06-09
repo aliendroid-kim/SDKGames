@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/design_default_color_error"
+        android:minHeight="?attr/actionBarSize"
+        android:theme="?attr/actionBarTheme" />
+
+    <FrameLayout
+        android:id="@+id/native_ad_small"
+        android:layout_width="0dp"
+        android:layout_height="100dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="parent">
+
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/native_ad_medium"
+        android:layout_width="300dp"
+        android:layout_height="400dp"
+        app:layout_constraintBottom_toTopOf="@+id/native_ad_small"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btn_native_medium">
+
+    </FrameLayout>
+
+    <Button
+        android:id="@+id/btn_start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="80dp"
+        android:text="Start H5 Games"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/btn_rw"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="RW"
+        app:layout_constraintBottom_toBottomOf="@+id/btn_is"
+        app:layout_constraintEnd_toStartOf="@+id/btn_is"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/btn_is" />
+
+    <Button
+        android:id="@+id/btn_is"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="IS"
+        app:layout_constraintEnd_toStartOf="@+id/btn_banner_show"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/btn_rw"
+        app:layout_constraintTop_toBottomOf="@+id/btn_start" />
+
+    <Button
+        android:id="@+id/btn_banner_show"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="B_Show"
+        app:layout_constraintBottom_toBottomOf="@+id/btn_is"
+        app:layout_constraintEnd_toStartOf="@+id/btn_banner_hide"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/btn_is"
+        app:layout_constraintTop_toTopOf="@+id/btn_is" />
+
+    <Button
+        android:id="@+id/btn_banner_hide"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="B_Hide"
+        app:layout_constraintBottom_toBottomOf="@+id/btn_banner_show"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/btn_banner_show"
+        app:layout_constraintTop_toTopOf="@+id/btn_banner_show" />
+
+    <Button
+        android:id="@+id/btn_native_small"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Native_S"
+        app:layout_constraintBottom_toBottomOf="@+id/btn_native_medium"
+        app:layout_constraintEnd_toStartOf="@+id/btn_native_medium"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/btn_native_medium" />
+
+    <Button
+        android:id="@+id/btn_native_medium"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="Native_M"
+        app:layout_constraintEnd_toStartOf="@+id/btn_native_hide"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/btn_native_small"
+        app:layout_constraintTop_toBottomOf="@+id/btn_is" />
+
+    <Button
+        android:id="@+id/btn_native_hide"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="NativeHide"
+        app:layout_constraintBottom_toBottomOf="@+id/btn_native_medium"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/btn_native_medium"
+        app:layout_constraintTop_toTopOf="@+id/btn_native_medium" />
+
+    <Button
+        android:id="@+id/btn_mediation"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:text="Mediation"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btn_native_medium" />
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigationView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/close_rewarded_button_color"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
