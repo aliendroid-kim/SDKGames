@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
         AdjustHelper.TrackEvent("svtdhn");
 
         //Ad initialization
-        JamboxAdsHelper.InitializeAds(this, interstitialId, rewardedId, bannerId,getString(R.string.sdk_key_applovin), new OnJamboxAdInitializeListener()
+        JamboxAdsHelper.InitializeAds(this, interstitialId, rewardedId, bannerId, new OnJamboxAdInitializeListener()
                 {
                     @Override
                     public void OnJamboxAdsInitialized()
@@ -199,7 +199,7 @@ public class MainActivity extends AppCompatActivity {
 
     void ShowBanner()
     {
-        JamboxAdsHelper.ShowBannerAdLayout(findViewById(R.id.banner_ads));
+        JamboxAdsHelper.ShowBannerAd(JamboxAdsHelper.BannerPosition.BOTTOM);
     }
 
     void HideBanner()
@@ -227,7 +227,7 @@ public class MainActivity extends AppCompatActivity {
 
     void ShowIS()
     {
-        JamboxAdsHelper.ShowInterstitial(null,2);
+        JamboxAdsHelper.ShowRewarded(null);
     }
 
     protected void onResume() {
