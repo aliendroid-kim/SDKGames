@@ -78,7 +78,7 @@ afterEvaluate {
             register<MavenPublication>("release") {
                 groupId = "com.github.aliendroid-kim"
                 artifactId = "SDKGames"
-                version = "1.0.2"
+                version = "1.0.4"
 
                 from(components["release"])
 
