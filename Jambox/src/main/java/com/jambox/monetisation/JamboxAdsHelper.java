@@ -6,6 +6,7 @@ import android.os.Handler;
 import android.app.Activity;
 import android.content.Context;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
@@ -29,7 +30,9 @@ import com.applovin.mediation.nativeAds.MaxNativeAdView;
 import com.applovin.sdk.AppLovinSdk;
 import com.applovin.sdk.AppLovinSdkConfiguration;
 import com.applovin.sdk.AppLovinSdkUtils;
-
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import java.util.concurrent.TimeUnit;
 
 public class JamboxAdsHelper
@@ -38,7 +41,8 @@ public class JamboxAdsHelper
     public static boolean IsInitialized;
     private static boolean IsInitializeCalled;
     private static Context context;
-
+    public static int statusBarPadding;
+    public static int navigationBarPadding;
     public static String jamboxKey = "T7PPns0K6JV00uGv0ZAEKsTWrpwA-N4Hchi_KKecaqTa_U5zQcyyoI_pTcC5TM1OgfrLz5dWGdASKWgK6l5Sks";
     private static String applovinKey = "";
 
@@ -53,7 +57,18 @@ public class JamboxAdsHelper
     {
         if (IsInitializeCalled)
             return;
+        View emptyView = new View(context);
+        ViewCompat.setOnApplyWindowInsetsListener(emptyView, (v, insets) -> {
+            Insets statusBars = insets.getInsets(WindowInsetsCompat.Type.statusBars());
+            Insets navigationBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars());
+            statusBarPadding = statusBars.top;
+            navigationBarPadding = navigationBars.bottom;
 
+            ViewGroup parent =  (ViewGroup) v.getParent();
+            parent.removeView(v);
+            return insets;
+        });
+        ((Activity)context).addContentView(emptyView, new FrameLayout.LayoutParams(0, 0));
         ApplicationInfo applicationInfo = null;
         try
         {
@@ -348,11 +363,15 @@ public class JamboxAdsHelper
 
         if (position == BannerPosition.TOP)
         {
-            bannerAdView.setLayoutParams( new FrameLayout.LayoutParams( width, heightPx, Gravity.TOP) );
-        }
-        else
-        {
-            bannerAdView.setLayoutParams( new FrameLayout.LayoutParams( width, heightPx, Gravity.BOTTOM) );
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams( width, heightPx);
+            params.topMargin += statusBarPadding;
+            params.gravity = Gravity.TOP;
+            bannerAdView.setLayoutParams(params);
+        } else {
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams( width, heightPx);
+            params.bottomMargin += navigationBarPadding;
+            params.gravity = Gravity.BOTTOM;
+            bannerAdView.setLayoutParams(params);
         }
         bannerAdView.setExtraParameter( "adaptive_banner", "true" );
         bannerAdView.setLocalExtraParameter( "adaptive_banner_width", 400 );

@@ -63,7 +63,8 @@ public class WebviewObject {
             //activity.setContentView(webview);
 
             FrameLayout.LayoutParams layout = (FrameLayout.LayoutParams)webviewLayout;
-            layout.bottomMargin = JamboxAdsHelper.GetBannerHeightInPx() + 20;
+            layout.topMargin = JamboxAdsHelper.statusBarPadding;
+            layout.bottomMargin = JamboxAdsHelper.GetBannerHeightInPx() + 20 + JamboxAdsHelper.navigationBarPadding;
 
             activity.addContentView(webview, layout);
         }

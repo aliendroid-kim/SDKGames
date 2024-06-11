@@ -185,7 +185,7 @@ public class MainActivity extends AppCompatActivity {
         //webview = new WebviewObject(this, h5ClientId, layoutParams);
 
         //webview.StartWebview();
-        webview.StartWebviewGame(JamboxGameKeys.flip_jump);
+        webview.StartWebview();
     }
 
     void CloseWebview()
@@ -230,13 +230,6 @@ public class MainActivity extends AppCompatActivity {
         JamboxAdsHelper.ShowRewarded(null);
     }
 
-    protected void onResume() {
-        super.onResume();
-        AdjustHelper.onResume();
-    }
-    protected void onPause() {
-        super.onPause();
-        AdjustHelper.onPause();
-    }
+
 
 }
