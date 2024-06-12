@@ -21,6 +21,7 @@ public class WebviewObject {
     private String ClientId;
     private boolean isDirectGame;
     private boolean isWebviewDestroyed = false;
+    private WebviewObjectListener listener;
     private ViewGroup.LayoutParams webviewLayout;
     private boolean isBannerOpenedByWebview = false;
 
@@ -36,6 +37,11 @@ public class WebviewObject {
         this.context = context;
         this.ClientId = ClientId;
         this.webviewLayout = webviewLayout;
+    }
+
+    public void SetListener(WebviewObjectListener listener)
+    {
+        this.listener = listener;
     }
 
     public void StartWebview()
@@ -123,6 +129,9 @@ public class WebviewObject {
 
     public void CloseWebview()
     {
+        if (isWebviewDestroyed)
+            return;
+
         if (isBannerOpenedByWebview)
         {
             isBannerOpenedByWebview = false;
@@ -132,6 +141,8 @@ public class WebviewObject {
         ((ViewGroup) webview.getParent()).removeView(webview);
         webview.destroy();
         isWebviewDestroyed = true;
+        if (listener != null)
+            listener.OnWebviewDestoyed();
     }
 
     public boolean IsWebviewDestroyed()

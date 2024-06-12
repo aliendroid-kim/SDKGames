@@ -185,7 +185,7 @@ public class MainActivity extends AppCompatActivity {
         //webview = new WebviewObject(this, h5ClientId, layoutParams);
 
         //webview.StartWebview();
-        webview.StartWebview();
+        webview.StartWebviewGame(JamboxGameKeys.aerial_hit);
     }
 
     void CloseWebview()
