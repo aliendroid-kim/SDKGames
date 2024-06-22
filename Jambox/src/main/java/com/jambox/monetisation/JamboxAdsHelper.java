@@ -468,6 +468,7 @@ public class JamboxAdsHelper
     private static String bannerId;
     private static MaxAdView bannerAdView;
     public static AppLovinAdView adViewDiscovery;
+    //region BANNER
     public static void ShowBannerAd(BannerPosition position)
     {
         if (!IsSdkKeyValid()) return;
@@ -484,9 +485,7 @@ public class JamboxAdsHelper
             @Override
             public void onAdCollapsed(@NonNull MaxAd maxAd) { }
             @Override
-            public void onAdLoaded(@NonNull MaxAd maxAd) {
-
-            }
+            public void onAdLoaded(@NonNull MaxAd maxAd) { }
             @Override
             public void onAdDisplayed(@NonNull MaxAd maxAd) { }
             @Override
@@ -512,11 +511,15 @@ public class JamboxAdsHelper
             params.topMargin += statusBarPadding;
             params.gravity = Gravity.TOP;
             bannerAdView.setLayoutParams(params);
-        } else {
+        }
+        else
+        {
             FrameLayout.LayoutParams params = new FrameLayout.LayoutParams( width, heightPx);
             params.bottomMargin += navigationBarPadding;
             params.gravity = Gravity.BOTTOM;
             bannerAdView.setLayoutParams(params);
+
+            //bannerAdView.setLayoutParams( new FrameLayout.LayoutParams( width, heightPx, Gravity.BOTTOM) );
         }
         bannerAdView.setExtraParameter( "adaptive_banner", "true" );
         bannerAdView.setLocalExtraParameter( "adaptive_banner_width", 400 );
