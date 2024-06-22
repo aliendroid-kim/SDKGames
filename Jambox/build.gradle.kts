@@ -33,7 +33,7 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
 
-    implementation("com.applovin:applovin-sdk:12.4.3")
+    implementation("com.applovin:applovin-sdk:12.5.0")
     implementation("com.applovin.mediation:chartboost-adapter:9.7.0.0")
     implementation("com.google.android.gms:play-services-base:18.5.0")
     implementation("com.applovin.mediation:fyber-adapter:8.2.7.1")

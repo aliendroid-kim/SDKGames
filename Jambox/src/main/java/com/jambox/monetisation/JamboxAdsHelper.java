@@ -2,6 +2,7 @@ package com.jambox.monetisation;
 
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.os.Bundle;
 import android.os.Handler;
 import android.app.Activity;
 import android.content.Context;
@@ -13,6 +14,11 @@ import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+
+import com.applovin.adview.AppLovinAdView;
+import com.applovin.adview.AppLovinIncentivizedInterstitial;
+import com.applovin.adview.AppLovinInterstitialAd;
+import com.applovin.adview.AppLovinInterstitialAdDialog;
 import com.applovin.mediation.MaxAd;
 import com.applovin.mediation.MaxAdFormat;
 import com.applovin.mediation.MaxAdListener;
@@ -27,13 +33,22 @@ import com.applovin.mediation.ads.MaxRewardedAd;
 import com.applovin.mediation.nativeAds.MaxNativeAdListener;
 import com.applovin.mediation.nativeAds.MaxNativeAdLoader;
 import com.applovin.mediation.nativeAds.MaxNativeAdView;
+import com.applovin.sdk.AppLovinAd;
+import com.applovin.sdk.AppLovinAdDisplayListener;
+import com.applovin.sdk.AppLovinAdLoadListener;
+import com.applovin.sdk.AppLovinAdRewardListener;
+import com.applovin.sdk.AppLovinAdSize;
 import com.applovin.sdk.AppLovinPrivacySettings;
 import com.applovin.sdk.AppLovinSdk;
 import com.applovin.sdk.AppLovinSdkConfiguration;
 import com.applovin.sdk.AppLovinSdkUtils;
+import com.google.android.gms.ads.AdRequest;
+
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class JamboxAdsHelper
@@ -51,6 +66,7 @@ public class JamboxAdsHelper
     public static void InitializeAds(Context context, String interstitialId, String rewardedId, String bannerId)
     {
         InitializeAds(context, interstitialId, rewardedId, bannerId, null);
+
     }
 
     public static void InitializeAds(Context context, String interstitialId, String rewardedId,
@@ -105,7 +121,8 @@ public class JamboxAdsHelper
                 }
             }
         });
-        AppLovinPrivacySettings.setIsAgeRestrictedUser( true, context );
+        AppLovinPrivacySettings.setHasUserConsent(true, context);
+        AppLovinPrivacySettings.setIsAgeRestrictedUser( false, context );
     }
     //endregion
 
@@ -128,8 +145,27 @@ public class JamboxAdsHelper
     private static MaxInterstitialAd interstitialAd;
     private static OnInterstitialAdListener interstitialAdListener;
     private static int interstitialRetryAttempt = 0;
+    public static AppLovinInterstitialAdDialog interstitialAdlovin;
+    public static AppLovinAd loadedAd;
     private static void InitializeInterstitial(Context context, String interstitialId)
     {
+        AdRequest.Builder builder = new AdRequest.Builder();
+        Bundle interstitialExtras = new Bundle();
+        interstitialExtras.putString("zone_id",interstitialId);
+        builder.addCustomEventExtrasBundle(AppLovinCustomEventInterstitial.class, interstitialExtras);
+        AppLovinSdk.getInstance(context).getAdService().loadNextAd(AppLovinAdSize.INTERSTITIAL, new AppLovinAdLoadListener() {
+            @Override
+            public void adReceived(AppLovinAd ad) {
+                loadedAd = ad;
+            }
+
+            @Override
+            public void failedToReceiveAd(int errorCode) {
+                // Look at AppLovinErrorCodes.java for list of error codes.
+            }
+        });
+        interstitialAdlovin = AppLovinInterstitialAd.create(AppLovinSdk.getInstance(context), context);
+
         interstitialAd = new MaxInterstitialAd( interstitialId, (Activity) context );
         interstitialAd.setListener(new MaxAdListener()
         {
@@ -201,10 +237,13 @@ public class JamboxAdsHelper
         if (!IsInitialized) return;
 
         interstitialAdListener = null;
-        if (interstitialAd.isReady())
-        {
+        if (interstitialAd.isReady()) {
             interstitialAdListener = _interstitialAdListener;
             interstitialAd.showAd();
+        } else {
+            if (interstitialAdlovin != null) {
+                interstitialAdlovin.showAndRender(loadedAd);
+            }
         }
     }
     private static int counter;
@@ -214,10 +253,13 @@ public class JamboxAdsHelper
         if (!IsInitialized) return;
         if (counter>=interval){
             interstitialAdListener = null;
-            if (interstitialAd.isReady())
-            {
+            if (interstitialAd.isReady()) {
                 interstitialAdListener = _interstitialAdListener;
                 interstitialAd.showAd();
+            } else {
+                if (interstitialAdlovin != null) {
+                    interstitialAdlovin.showAndRender(loadedAd);
+                }
             }
             counter=0;
         } else {
@@ -231,8 +273,21 @@ public class JamboxAdsHelper
     private static MaxRewardedAd rewardedAd;
     private static OnRewardedAdListener rewardedAdListener;
     private static int rewardedRetryAttempt = 0;
+    public static AppLovinIncentivizedInterstitial incentivizedInterstitial;
     private static void InitializeRewarded(Context context, String rewardedId)
     {
+        incentivizedInterstitial = AppLovinIncentivizedInterstitial.create(rewardedId, AppLovinSdk.getInstance(context));
+        incentivizedInterstitial.preload(new AppLovinAdLoadListener() {
+            @Override
+            public void adReceived(AppLovinAd appLovinAd) {
+
+            }
+
+            @Override
+            public void failedToReceiveAd(int errorCode) {
+
+            }
+        });
         rewardedAd = MaxRewardedAd.getInstance( rewardedId, (Activity) context );
         rewardedAd.setListener(new MaxRewardedAdListener()
         {
@@ -240,8 +295,7 @@ public class JamboxAdsHelper
             public void onUserRewarded(@NonNull MaxAd maxAd, @NonNull MaxReward maxReward)
             {
                 // Rewarded ad was displayed and user should receive the reward
-                if (rewardedAdListener != null)
-                {
+                if (rewardedAdListener != null) {
                     rewardedAdListener.OnAdCompleted();
                 }
             }
@@ -262,8 +316,7 @@ public class JamboxAdsHelper
             {
                 // rewarded ad is hidden. Pre-load the next ad
                 rewardedAd.loadAd();
-                if (rewardedAdListener != null)
-                {
+                if (rewardedAdListener != null) {
                     rewardedAdListener.OnAdHidden();
                 }
             }
@@ -294,15 +347,13 @@ public class JamboxAdsHelper
             {
                 // Rewarded ad failed to display. AppLovin recommends that you load the next ad.
                 rewardedAd.loadAd();
-                if (rewardedAdListener != null)
-                {
+                if (rewardedAdListener != null) {
                     rewardedAdListener.OnAdDisplayFailed();
                 }
             }
         });
         rewardedAd.loadAd();
     }
-
     public static void ShowRewarded(OnRewardedAdListener _rewardedAdListener)
     {
         if (!IsSdkKeyValid()) return;
@@ -313,13 +364,102 @@ public class JamboxAdsHelper
         };
 
         rewardedAdListener = null;
-        if (rewardedAd.isReady())
-        {
+        if (rewardedAd.isReady()) {
             rewardedAdListener = _rewardedAdListener;
             rewardedAd.showAd();
-        }
-        else {
+        } else {
             if(_rewardedAdListener != null) _rewardedAdListener.OnAdDisplayFailed();
+            if (incentivizedInterstitial != null) {
+                incentivizedInterstitial.show(context, new AppLovinAdRewardListener() {
+                    @Override
+                    public void userRewardVerified(AppLovinAd ad, Map<String, String> response) {
+                        if (rewardedAdListener != null) {
+                            rewardedAdListener.OnAdCompleted();
+                        }
+                    }
+
+                    @Override
+                    public void userOverQuota(AppLovinAd ad, Map<String, String> response) {
+
+                    }
+
+                    @Override
+                    public void userRewardRejected(AppLovinAd ad, Map<String, String> response) {
+
+                    }
+
+                    @Override
+                    public void validationRequestFailed(AppLovinAd ad, int errorCode) {
+
+                    }
+                }, null, new AppLovinAdDisplayListener() {
+                    @Override
+                    public void adDisplayed(AppLovinAd appLovinAd) {
+
+                    }
+
+                    @Override
+                    public void adHidden(AppLovinAd appLovinAd) {
+                        incentivizedInterstitial.preload(null);
+                    }
+                });
+            }
+        }
+    }
+    public static void ShowRewarded(Context context, OnRewardedAdListener _rewardedAdListener)
+    {
+        if (!IsSdkKeyValid()) return;
+
+        if (!IsInitialized) {
+            if(_rewardedAdListener != null) _rewardedAdListener.OnAdDisplayFailed();
+            return;
+        };
+        rewardedAdListener = null;
+        if (rewardedAd.isReady()) {
+            rewardedAdListener = _rewardedAdListener;
+            rewardedAd.showAd();
+        } else {
+            if(_rewardedAdListener != null) _rewardedAdListener.OnAdDisplayFailed();
+            if (incentivizedInterstitial != null) {
+                incentivizedInterstitial.show(context, new AppLovinAdRewardListener() {
+                    @Override
+                    public void userRewardVerified(AppLovinAd ad, Map<String, String> response) {
+                        if (rewardedAdListener != null) {
+                            rewardedAdListener.OnAdCompleted();
+                        }
+                    }
+
+                    @Override
+                    public void userOverQuota(AppLovinAd ad, Map<String, String> response) {
+
+                    }
+
+                    @Override
+                    public void userRewardRejected(AppLovinAd ad, Map<String, String> response) {
+
+                    }
+
+                    @Override
+                    public void validationRequestFailed(AppLovinAd ad, int errorCode) {
+                        if (rewardedAdListener != null) {
+                            rewardedAdListener.OnAdDisplayFailed();
+                        }
+                    }
+                }, null, new AppLovinAdDisplayListener() {
+                    @Override
+                    public void adDisplayed(AppLovinAd appLovinAd) {
+
+                    }
+
+                    @Override
+                    public void adHidden(AppLovinAd appLovinAd) {
+                        incentivizedInterstitial.preload(null);
+                        if (rewardedAdListener != null) {
+                            rewardedAdListener.OnAdHidden();
+                        }
+                    }
+                });
+            }
         }
     }
     //endregion
@@ -327,6 +467,7 @@ public class JamboxAdsHelper
     //region BANNER
     private static String bannerId;
     private static MaxAdView bannerAdView;
+    public static AppLovinAdView adViewDiscovery;
     public static void ShowBannerAd(BannerPosition position)
     {
         if (!IsSdkKeyValid()) return;
@@ -343,7 +484,9 @@ public class JamboxAdsHelper
             @Override
             public void onAdCollapsed(@NonNull MaxAd maxAd) { }
             @Override
-            public void onAdLoaded(@NonNull MaxAd maxAd) { }
+            public void onAdLoaded(@NonNull MaxAd maxAd) {
+
+            }
             @Override
             public void onAdDisplayed(@NonNull MaxAd maxAd) { }
             @Override
@@ -408,13 +551,43 @@ public class JamboxAdsHelper
             @Override
             public void onAdLoaded(@NonNull MaxAd maxAd) { }
             @Override
-            public void onAdDisplayed(@NonNull MaxAd maxAd) { }
+            public void onAdDisplayed(@NonNull MaxAd maxAd) {
+                if (adViewDiscovery != null) {
+                    adViewDiscovery.destroy();
+                }
+
+            }
             @Override
             public void onAdHidden(@NonNull MaxAd maxAd) { }
             @Override
             public void onAdClicked(@NonNull MaxAd maxAd) { }
             @Override
-            public void onAdLoadFailed(@NonNull String s, @NonNull MaxError maxError) { }
+            public void onAdLoadFailed(@NonNull String s, @NonNull MaxError maxError) {
+                AdRequest.Builder builder = new AdRequest.Builder();
+                Bundle bannerExtras = new Bundle();
+                bannerExtras.putString("zone_id", bannerId);
+                builder.addCustomEventExtrasBundle(AppLovinCustomEventBanner.class, bannerExtras);
+
+                boolean isTablet2 = AppLovinSdkUtils.isTablet(context);
+                AppLovinAdSize adSize = isTablet2 ? AppLovinAdSize.LEADER : AppLovinAdSize.BANNER;
+                adViewDiscovery = new AppLovinAdView(adSize, context);
+                AppLovinAdLoadListener loadListener = new AppLovinAdLoadListener() {
+                    @Override
+                    public void adReceived(AppLovinAd ad) {
+
+
+                    }
+
+                    @Override
+                    public void failedToReceiveAd(int errorCode) {
+                        layoutAds.setVisibility(View.GONE);
+
+                    }
+                };
+                adViewDiscovery.setAdLoadListener(loadListener);
+                layoutAds.addView(adViewDiscovery);
+                adViewDiscovery.loadNextAd();
+            }
             @Override
             public void onAdDisplayFailed(@NonNull MaxAd maxAd, @NonNull MaxError maxError) { }
         });
