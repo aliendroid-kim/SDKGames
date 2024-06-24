@@ -123,6 +123,9 @@ public class JamboxAdsHelper
         });
         AppLovinPrivacySettings.setHasUserConsent(true, context);
         AppLovinPrivacySettings.setIsAgeRestrictedUser( false, context );
+        if(BuildConfig.DEBUG){
+            AppLovinSdk.getInstance( context).showMediationDebugger();
+        }
     }
     //endregion
 
