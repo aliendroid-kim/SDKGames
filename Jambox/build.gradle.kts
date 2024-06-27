@@ -50,7 +50,7 @@ dependencies {
     implementation("com.applovin.mediation:ironsource-adapter:8.1.0.0.0")
     implementation("com.applovin.mediation:vungle-adapter:7.3.2.2")
     implementation("com.applovin.mediation:facebook-adapter:6.17.0.0")
-    implementation("com.applovin.mediation:mintegral-adapter:16.7.61.0")
+    implementation("com.applovin.mediation:mintegral-adapter:16.7.71.0")
     implementation("com.applovin.mediation:bytedance-adapter:5.9.0.6.0")
     implementation("com.applovin.mediation:smaato-adapter:22.6.2.0")
     implementation("com.applovin.mediation:unityads-adapter:4.12.0.0")
@@ -83,7 +83,7 @@ afterEvaluate {
             register<MavenPublication>("release") {
                 groupId = "com.github.aliendroid-kim"
                 artifactId = "SDKGames"
-                version = "1.0.8"
+                version = "1.0.10"
 
                 from(components["release"])
 

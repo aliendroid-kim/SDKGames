@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.RelativeLayout;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
@@ -157,8 +158,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v)
             {
-                ((FrameLayout)findViewById(R.id.native_ad_small)).removeAllViews();
-                ((FrameLayout)findViewById(R.id.native_ad_medium)).removeAllViews();
+                ((RelativeLayout)findViewById(R.id.native_ad_small)).removeAllViews();
+                ((RelativeLayout)findViewById(R.id.native_ad_medium)).removeAllViews();
                 JamboxAdsHelper.HideNativeAd();
             }
         });

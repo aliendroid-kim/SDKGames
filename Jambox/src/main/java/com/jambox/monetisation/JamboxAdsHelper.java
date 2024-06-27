@@ -645,7 +645,7 @@ public class JamboxAdsHelper
         JamboxAdsHelper.nativeId = nativeId;
     }
 
-    public static void ShowNativeAd(FrameLayout frameLayout, NativeAdTemplate template)
+    public static void ShowNativeAd(RelativeLayout frameLayout, NativeAdTemplate template)
     {
         if (!IsSdkKeyValid()) return;
         if (!IsInitialized) return;
