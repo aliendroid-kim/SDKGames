@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.app.Activity;
 import android.content.Context;
+import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -41,6 +42,7 @@ import com.applovin.sdk.AppLovinAdSize;
 import com.applovin.sdk.AppLovinPrivacySettings;
 import com.applovin.sdk.AppLovinSdk;
 import com.applovin.sdk.AppLovinSdkConfiguration;
+import com.applovin.sdk.AppLovinSdkSettings;
 import com.applovin.sdk.AppLovinSdkUtils;
 import com.google.android.gms.ads.AdRequest;
 
@@ -48,6 +50,9 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -122,9 +127,16 @@ public class JamboxAdsHelper
             }
         });
         AppLovinPrivacySettings.setHasUserConsent(true, context);
-        AppLovinPrivacySettings.setIsAgeRestrictedUser( false, context );
         if(BuildConfig.DEBUG){
-            AppLovinSdk.getInstance( context).showMediationDebugger();
+            String android_id = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
+            String deviceId = md5(android_id).toUpperCase();
+            AppLovinSdkSettings settings = new AppLovinSdkSettings( context );
+            settings.setTestDeviceAdvertisingIds(Arrays.asList(deviceId));
+            AppLovinSdk sdk = AppLovinSdk.getInstance( settings, context );
+            sdk.showMediationDebugger();
+            AppLovinPrivacySettings.setIsAgeRestrictedUser( false, context );
+        } else {
+            AppLovinPrivacySettings.setIsAgeRestrictedUser( true, context );
         }
     }
     //endregion
@@ -798,4 +810,27 @@ public class JamboxAdsHelper
         BOTTOM
     }
 
+    public static final String md5(final String s) {
+        try {
+            // Create MD5 Hash
+            MessageDigest digest = MessageDigest
+                    .getInstance("MD5");
+            digest.update(s.getBytes());
+            byte[] messageDigest = digest.digest();
+
+            // Create Hex String
+            StringBuffer hexString = new StringBuffer();
+            for (int i = 0; i < messageDigest.length; i++) {
+                String h = Integer.toHexString(0xFF & messageDigest[i]);
+                while (h.length() < 2)
+                    h = "0" + h;
+                hexString.append(h);
+            }
+            return hexString.toString();
+
+        } catch (NoSuchAlgorithmException e) {
+            //Logger.logStackTrace(TAG,e);
+        }
+        return "";
+    }
 }
