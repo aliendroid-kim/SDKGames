@@ -829,8 +829,6 @@ public class JamboxAdsHelper
         String deviceId = md5(android_id).toUpperCase();
         AppLovinSdkSettings settings = new AppLovinSdkSettings( context );
         settings.setTestDeviceAdvertisingIds(Arrays.asList(deviceId));
-        AppLovinSdk sdk = AppLovinSdk.getInstance( settings, context );
-        sdk.showMediationDebugger();
         AppLovinPrivacySettings.setIsAgeRestrictedUser( true, context );
     }
 
