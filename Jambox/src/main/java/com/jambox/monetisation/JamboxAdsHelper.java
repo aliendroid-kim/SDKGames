@@ -127,17 +127,7 @@ public class JamboxAdsHelper
             }
         });
         AppLovinPrivacySettings.setHasUserConsent(true, context);
-        if(BuildConfig.DEBUG){
-            String android_id = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
-            String deviceId = md5(android_id).toUpperCase();
-            AppLovinSdkSettings settings = new AppLovinSdkSettings( context );
-            settings.setTestDeviceAdvertisingIds(Arrays.asList(deviceId));
-            AppLovinSdk sdk = AppLovinSdk.getInstance( settings, context );
-            sdk.showMediationDebugger();
-            AppLovinPrivacySettings.setIsAgeRestrictedUser( false, context );
-        } else {
-            AppLovinPrivacySettings.setIsAgeRestrictedUser( true, context );
-        }
+        AppLovinPrivacySettings.setIsAgeRestrictedUser( true, context );
     }
     //endregion
 
@@ -841,10 +831,10 @@ public class JamboxAdsHelper
         settings.setTestDeviceAdvertisingIds(Arrays.asList(deviceId));
         AppLovinSdk sdk = AppLovinSdk.getInstance( settings, context );
         sdk.showMediationDebugger();
-        AppLovinPrivacySettings.setIsAgeRestrictedUser( false, context );
+        AppLovinPrivacySettings.setIsAgeRestrictedUser( true, context );
     }
 
     public static void RELEASE_MODE(Activity context) {
-        AppLovinPrivacySettings.setIsAgeRestrictedUser( false, context );
+        AppLovinPrivacySettings.setIsAgeRestrictedUser( true, context );
     }
 }
