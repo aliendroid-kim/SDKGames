@@ -58,7 +58,7 @@ public class WebviewObject {
     {
         if (!JamboxAdsHelper.IsInitialized)
         {
-            Log.e("JamboxWebview", "ERROR: Please make sure JamboxAdsHelper is initialized before starting H5 Games");
+            JamboxLog.Error("Please make sure JamboxAdsHelper is initialized before starting H5 Games");
             return;
         }
 
@@ -159,7 +159,7 @@ public class WebviewObject {
                     @Override
                     public void OnAdDisplayFailed()
                     {
-                        System.out.println("RW display Failed!!");
+                        JamboxLog.Error("Webview callback: Rewarded display Failed");
                         String script = "handleMaxRewardedCallback(" + GetCallbackJson(JamboxAdsHelper.AdsCode.ADS_NOT_SHOWN) + ")";
                         webview.evaluateJavascript(script, null);
                     }
@@ -167,7 +167,7 @@ public class WebviewObject {
                     @Override
                     public void OnAdDisplayed()
                     {
-                        System.out.println("RW Displayed!!");
+                        JamboxLog.Info("Webview callback: Rewarded Displayed");
                         String script = "handleMaxRewardedCallback(" + GetCallbackJson(JamboxAdsHelper.AdsCode.BEFORE_ADS_SHOWN) + ")";
                         webview.evaluateJavascript(script, null);
                     }
@@ -175,7 +175,7 @@ public class WebviewObject {
                     @Override
                     public void OnAdCompleted()
                     {
-                        System.out.println("RW completed!");
+                        JamboxLog.Info("Webview callback: Rewarded Completed");
                         String script = "handleMaxRewardedCallback(" + GetCallbackJson(JamboxAdsHelper.AdsCode.ADS_WATCH_SUCCESS) + ")";
                         webview.evaluateJavascript(script, null);
                     }
@@ -183,7 +183,7 @@ public class WebviewObject {
                     @Override
                     public void OnAdHidden()
                     {
-                        System.out.println("RW Hidden!!");
+                        JamboxLog.Info("Webview callback: Rewarded Hidden");
                         String script = "handleMaxRewardedCallback(" + GetCallbackJson(JamboxAdsHelper.AdsCode.ADS_VIEWED_OR_DISMISSED) + ")";
                         webview.evaluateJavascript(script, null);
                     }
@@ -199,10 +199,10 @@ public class WebviewObject {
                 JamboxAdsHelper.HideBannerAd();
                 break;
             default:
-                System.out.println("No Match Found");
+                JamboxLog.Info("Webview callback: No Match found");
                 break;
         }
-        System.out.println(msg);
+        JamboxLog.Info("Webview callback message received: " + msg);
     }
 
     private String GetCallbackJson(int code)

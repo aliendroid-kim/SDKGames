@@ -2,6 +2,7 @@ package com.Jambox.party;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.util.Config;
 import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
@@ -14,6 +15,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.jambox.monetisation.AdjustHelper;
+import com.jambox.monetisation.BuildConfig;
 import com.jambox.monetisation.JamboxAdsHelper;
 import com.jambox.monetisation.JamboxGameKeys;
 import com.jambox.monetisation.OnJamboxAdInitializeListener;
@@ -44,6 +46,9 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
+        if (BuildConfig.DEBUG){
+            JamboxAdsHelper.DEBUG_MODE(this);
+        }
         context = this;
         findViewById(R.id.main).setVisibility(View.GONE);
         //Test app open event
@@ -58,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
                         findViewById(R.id.main).setVisibility(View.VISIBLE);
 
                         //Initializing native
-                        JamboxAdsHelper.InitializeNativeAd(nativeId);
+                        //JamboxAdsHelper.InitializeNativeAd(nativeId);
 
                         //Initializing App Open Ad
                         JamboxAdsHelper.InitializeAppOpenAds(appOpenId);
@@ -137,7 +142,8 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v)
             {
                 findViewById(R.id.native_ad_small).setVisibility(View.VISIBLE);
-                JamboxAdsHelper.ShowNativeAd(findViewById(R.id.native_ad_small), JamboxAdsHelper.NativeAdTemplate.SMALL);
+                FrameLayout layNative = findViewById(R.id.native_ad_small);
+                JamboxAdsHelper.ShowNativeAd(layNative, JamboxAdsHelper.NativeAdTemplate.SMALL);
             }
         });
 
@@ -148,7 +154,8 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v)
             {
                 findViewById(R.id.native_ad_small).setVisibility(View.GONE);
-                JamboxAdsHelper.ShowNativeAd(findViewById(R.id.native_ad_medium), JamboxAdsHelper.NativeAdTemplate.MEDIUM);
+                FrameLayout layNative = findViewById(R.id.native_ad_medium);
+                JamboxAdsHelper.ShowNativeAd(layNative, JamboxAdsHelper.NativeAdTemplate.MEDIUM);
             }
         });
 
@@ -158,8 +165,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v)
             {
-                ((RelativeLayout)findViewById(R.id.native_ad_small)).removeAllViews();
-                ((RelativeLayout)findViewById(R.id.native_ad_medium)).removeAllViews();
+                ((FrameLayout)findViewById(R.id.native_ad_small)).removeAllViews();
+                ((FrameLayout)findViewById(R.id.native_ad_medium)).removeAllViews();
                 JamboxAdsHelper.HideNativeAd();
             }
         });

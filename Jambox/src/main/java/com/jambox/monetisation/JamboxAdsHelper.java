@@ -2,7 +2,7 @@ package com.jambox.monetisation;
 
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.os.Bundle;
+import android.os.AsyncTask;
 import android.os.Handler;
 import android.app.Activity;
 import android.content.Context;
@@ -15,11 +15,10 @@ import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
-import com.applovin.adview.AppLovinAdView;
-import com.applovin.adview.AppLovinIncentivizedInterstitial;
-import com.applovin.adview.AppLovinInterstitialAd;
-import com.applovin.adview.AppLovinInterstitialAdDialog;
 import com.applovin.mediation.MaxAd;
 import com.applovin.mediation.MaxAdFormat;
 import com.applovin.mediation.MaxAdListener;
@@ -34,26 +33,21 @@ import com.applovin.mediation.ads.MaxRewardedAd;
 import com.applovin.mediation.nativeAds.MaxNativeAdListener;
 import com.applovin.mediation.nativeAds.MaxNativeAdLoader;
 import com.applovin.mediation.nativeAds.MaxNativeAdView;
-import com.applovin.sdk.AppLovinAd;
-import com.applovin.sdk.AppLovinAdDisplayListener;
-import com.applovin.sdk.AppLovinAdLoadListener;
-import com.applovin.sdk.AppLovinAdRewardListener;
-import com.applovin.sdk.AppLovinAdSize;
 import com.applovin.sdk.AppLovinPrivacySettings;
 import com.applovin.sdk.AppLovinSdk;
 import com.applovin.sdk.AppLovinSdkConfiguration;
 import com.applovin.sdk.AppLovinSdkSettings;
 import com.applovin.sdk.AppLovinSdkUtils;
-import com.google.android.gms.ads.AdRequest;
-
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+import com.google.android.gms.appset.AppSet;
+import com.google.android.gms.appset.AppSetIdClient;
+import com.google.android.gms.appset.AppSetIdInfo;
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 public class JamboxAdsHelper
@@ -62,23 +56,34 @@ public class JamboxAdsHelper
     public static boolean IsInitialized;
     private static boolean IsInitializeCalled;
     private static Context context;
-    public static int statusBarPadding;
-    public static int navigationBarPadding;
+
     public static String jamboxKey = "T7PPns0K6JV00uGv0ZAEKsTWrpwA-N4Hchi_KKecaqTa_U5zQcyyoI_pTcC5TM1OgfrLz5dWGdASKWgK6l5Sks";
     private static String applovinKey = "";
+    public static int statusBarPadding;
+    public static int navigationBarPadding;
+
+    private static OnJamboxAdInitializeListener listener;
 
     //region INITIALIZE
     public static void InitializeAds(Context context, String interstitialId, String rewardedId, String bannerId)
     {
         InitializeAds(context, interstitialId, rewardedId, bannerId, null);
-
     }
 
     public static void InitializeAds(Context context, String interstitialId, String rewardedId,
                                      String bannerId, OnJamboxAdInitializeListener listener)
     {
+        InitializeAds(context, interstitialId, rewardedId, bannerId, listener, false);
+    }
+
+    public static void InitializeAds(Context context, String interstitialId, String rewardedId,
+                                     String bannerId, OnJamboxAdInitializeListener listener, boolean testMode)
+    {
         if (IsInitializeCalled)
             return;
+
+        JamboxLog.Info("Initializing Ads...");
+        //Getting the status and navigation bar paddings
         View emptyView = new View(context);
         ViewCompat.setOnApplyWindowInsetsListener(emptyView, (v, insets) -> {
             Insets statusBars = insets.getInsets(WindowInsetsCompat.Type.statusBars());
@@ -91,6 +96,7 @@ public class JamboxAdsHelper
             return insets;
         });
         ((Activity)context).addContentView(emptyView, new FrameLayout.LayoutParams(0, 0));
+
         ApplicationInfo applicationInfo = null;
         try
         {
@@ -98,7 +104,8 @@ public class JamboxAdsHelper
         }
         catch (PackageManager.NameNotFoundException e)
         {
-            System.out.println("ERROR: Ads Initialization failed : " + e);
+            JamboxLog.Error("Ads Initialization failed : " + e);
+            JamboxLog.Error("Please make sure that the Applovin SDK Key is properly set");
             return;
         }
         applovinKey = applicationInfo.metaData.getString("applovin.sdk.key");
@@ -107,27 +114,70 @@ public class JamboxAdsHelper
         if (!IsSdkKeyValid())
             return;
 
+        JamboxAdsHelper.interstitialId = interstitialId;
+        JamboxAdsHelper.rewardedId = rewardedId;
+        JamboxAdsHelper.bannerId = bannerId;
+        JamboxAdsHelper.listener = listener;
         IsInitializeCalled = true;
 
-        // Make sure to set the mediation provider value to "max" to ensure proper functionality
-        AppLovinSdk.getInstance(context).setMediationProvider("max");
-        AppLovinSdk.getInstance(context).initializeSdk(new AppLovinSdk.SdkInitializationListener() {
+        if (!testMode)
+        {
+            InitApplovin(false, "");
+            return;
+        }
+
+        //In test mode, we fetch the gaid and then init applovin
+        AsyncTask<Void, Void, String> task = new AsyncTask<Void, Void, String>() {
+            @Override
+            protected String doInBackground(Void... params) {
+                AppSetIdClient client = AppSet.getClient(context);
+                Task<AppSetIdInfo> info = client.getAppSetIdInfo();
+                try
+                {
+                    Tasks.await(info);
+                    InitApplovin(true, info.getResult().getId());
+                }
+                catch (ExecutionException | InterruptedException e)
+                {
+                    throw new RuntimeException(e);
+                }
+                return info.getResult().getId();
+            }
+        };
+        task.execute();
+    }
+
+    static void InitApplovin(boolean testMode, String appSetID)
+    {
+        AppLovinSdk sdk;
+        if (testMode)
+        {
+            JamboxLog.Info("Applovin Init Test Device AAID : " + appSetID);
+            AppLovinSdkSettings settings = new AppLovinSdkSettings( context );
+            settings.setTestDeviceAdvertisingIds(Arrays.asList(appSetID));
+            sdk = AppLovinSdk.getInstance(settings, context);
+        }
+        else
+        {
+            sdk = AppLovinSdk.getInstance(context);
+        }
+
+        sdk.setMediationProvider("max");
+        sdk.initializeSdk(new AppLovinSdk.SdkInitializationListener() {
             @Override
             public void onSdkInitialized(AppLovinSdkConfiguration appLovinSdkConfiguration) {
                 //SDK Initialized
-                System.out.println("Applovin SDK Initialized");
+                JamboxLog.Info("Ads Initialized");
+                JamboxLog.Info("Loading Ads...");
                 IsInitialized = true;
-                InitializeInterstitial(context, interstitialId);
-                InitializeRewarded(context, rewardedId);
-                JamboxAdsHelper.bannerId = bannerId;
-                if (listener !=null)
+                InitializeInterstitial(context);
+                InitializeRewarded(context);
+                if (listener != null)
                 {
                     listener.OnJamboxAdsInitialized();
                 }
             }
         });
-        AppLovinPrivacySettings.setHasUserConsent(true, context);
-        AppLovinPrivacySettings.setIsAgeRestrictedUser( true, context );
     }
     //endregion
 
@@ -141,36 +191,19 @@ public class JamboxAdsHelper
         {
             if (context != null)
                 Toast.makeText(context, "Please use the applovin SDK key provided by Jambox Games", Toast.LENGTH_SHORT).show();
-            System.out.println("ERROR: Ads Initialization failed : Please use the applovin SDK key provided by Jambox Games");
+            JamboxLog.Error("Ads Initialization failed : Please use the applovin SDK key provided by Jambox Games");
             return false;
         }
     }
 
     //region INTERSTITIAL
+    private static String interstitialId;
     private static MaxInterstitialAd interstitialAd;
     private static OnInterstitialAdListener interstitialAdListener;
+    private static boolean IsInvalidInterstitialId = false;
     private static int interstitialRetryAttempt = 0;
-    public static AppLovinInterstitialAdDialog interstitialAdlovin;
-    public static AppLovinAd loadedAd;
-    private static void InitializeInterstitial(Context context, String interstitialId)
+    private static void InitializeInterstitial(Context context)
     {
-        AdRequest.Builder builder = new AdRequest.Builder();
-        Bundle interstitialExtras = new Bundle();
-        interstitialExtras.putString("zone_id",interstitialId);
-        builder.addCustomEventExtrasBundle(AppLovinCustomEventInterstitial.class, interstitialExtras);
-        AppLovinSdk.getInstance(context).getAdService().loadNextAd(AppLovinAdSize.INTERSTITIAL, new AppLovinAdLoadListener() {
-            @Override
-            public void adReceived(AppLovinAd ad) {
-                loadedAd = ad;
-            }
-
-            @Override
-            public void failedToReceiveAd(int errorCode) {
-                // Look at AppLovinErrorCodes.java for list of error codes.
-            }
-        });
-        interstitialAdlovin = AppLovinInterstitialAd.create(AppLovinSdk.getInstance(context), context);
-
         interstitialAd = new MaxInterstitialAd( interstitialId, (Activity) context );
         interstitialAd.setListener(new MaxAdListener()
         {
@@ -208,6 +241,14 @@ public class JamboxAdsHelper
             @Override
             public void onAdLoadFailed(@NonNull String s, @NonNull MaxError maxError)
             {
+                JamboxLog.Error("Interstitial Load Failed: " + maxError.getMessage());
+                if (maxError.getCode() == -5603)
+                {
+                    IsInvalidInterstitialId = true;
+                    ShowInvalidInterstitialIDAlert();
+                    return;
+                }
+
                 // Interstitial ad failed to load
                 // AppLovin recommends that you retry with exponentially higher delays up to a maximum delay (in this case 64 seconds)
                 interstitialRetryAttempt++;
@@ -225,6 +266,7 @@ public class JamboxAdsHelper
             @Override
             public void onAdDisplayFailed(@NonNull MaxAd maxAd, @NonNull MaxError maxError)
             {
+                JamboxLog.Error("Interstitial Display Failed: " + maxError.getMessage());
                 // Interstitial ad failed to display. AppLovin recommends that you load the next ad.
                 interstitialAd.loadAd();
                 if (interstitialAdListener != null)
@@ -233,66 +275,54 @@ public class JamboxAdsHelper
                 }
             }
         });
+
         interstitialAd.loadAd();
     }
 
     public static void ShowInterstitial(OnInterstitialAdListener _interstitialAdListener)
     {
         if (!IsSdkKeyValid()) return;
-        if (!IsInitialized) return;
+        if (!IsInitialized)
+        {
+            JamboxLog.Warn("Make sure that the SDK is initialized before trying to show ads...");
+            return;
+        }
+
+        //Checking for invalid placement Id
+        if (IsInvalidInterstitialId)
+        {
+            ShowInvalidInterstitialIDAlert();
+            return;
+        }
 
         interstitialAdListener = null;
-        if (interstitialAd.isReady()) {
+        if (interstitialAd.isReady())
+        {
             interstitialAdListener = _interstitialAdListener;
             interstitialAd.showAd();
-        } else {
-            if (interstitialAdlovin != null) {
-                interstitialAdlovin.showAndRender(loadedAd);
-            }
+        }
+        else
+        {
+            JamboxLog.Error("Interstitial Ad is not ready");
         }
     }
-    private static int counter;
-    public static void ShowInterstitial(OnInterstitialAdListener _interstitialAdListener, int interval)
-    {
-        if (!IsSdkKeyValid()) return;
-        if (!IsInitialized) return;
-        if (counter>=interval){
-            interstitialAdListener = null;
-            if (interstitialAd.isReady()) {
-                interstitialAdListener = _interstitialAdListener;
-                interstitialAd.showAd();
-            } else {
-                if (interstitialAdlovin != null) {
-                    interstitialAdlovin.showAndRender(loadedAd);
-                }
-            }
-            counter=0;
-        } else {
-            counter++;
-        }
 
+    static void ShowInvalidInterstitialIDAlert()
+    {
+        if (context != null)
+            Toast.makeText(context, "Please double-check the placement Id for Interstitial Ads", Toast.LENGTH_SHORT).show();
+        JamboxLog.Error("Please double-check the placement Id for Interstitial Ads");
     }
     //endregion
 
     //region REWARDED
+    private static String rewardedId;
     private static MaxRewardedAd rewardedAd;
     private static OnRewardedAdListener rewardedAdListener;
+    private static boolean IsInvalidRewardedId = false;
     private static int rewardedRetryAttempt = 0;
-    public static AppLovinIncentivizedInterstitial incentivizedInterstitial;
-    private static void InitializeRewarded(Context context, String rewardedId)
+    private static void InitializeRewarded(Context context)
     {
-        incentivizedInterstitial = AppLovinIncentivizedInterstitial.create(rewardedId, AppLovinSdk.getInstance(context));
-        incentivizedInterstitial.preload(new AppLovinAdLoadListener() {
-            @Override
-            public void adReceived(AppLovinAd appLovinAd) {
-
-            }
-
-            @Override
-            public void failedToReceiveAd(int errorCode) {
-
-            }
-        });
         rewardedAd = MaxRewardedAd.getInstance( rewardedId, (Activity) context );
         rewardedAd.setListener(new MaxRewardedAdListener()
         {
@@ -300,7 +330,8 @@ public class JamboxAdsHelper
             public void onUserRewarded(@NonNull MaxAd maxAd, @NonNull MaxReward maxReward)
             {
                 // Rewarded ad was displayed and user should receive the reward
-                if (rewardedAdListener != null) {
+                if (rewardedAdListener != null)
+                {
                     rewardedAdListener.OnAdCompleted();
                 }
             }
@@ -321,7 +352,8 @@ public class JamboxAdsHelper
             {
                 // rewarded ad is hidden. Pre-load the next ad
                 rewardedAd.loadAd();
-                if (rewardedAdListener != null) {
+                if (rewardedAdListener != null)
+                {
                     rewardedAdListener.OnAdHidden();
                 }
             }
@@ -332,9 +364,16 @@ public class JamboxAdsHelper
             @Override
             public void onAdLoadFailed(@NonNull String s, @NonNull MaxError maxError)
             {
+                JamboxLog.Error("Rewarded Load Failed: " + maxError.getMessage());
+                if (maxError.getCode() == -5603)
+                {
+                    IsInvalidRewardedId = true;
+                    ShowInvalidRewardedIDAlert();
+                    return;
+                }
+
                 // Rewarded ad failed to load
                 // AppLovin recommends that you retry with exponentially higher delays up to a maximum delay (in this case 64 seconds)
-
                 rewardedRetryAttempt++;
                 long delayMillis = TimeUnit.SECONDS.toMillis( (long) Math.pow( 2, Math.min( 6, rewardedRetryAttempt ) ) );
                 new Handler().postDelayed( new Runnable()
@@ -350,137 +389,80 @@ public class JamboxAdsHelper
             @Override
             public void onAdDisplayFailed(@NonNull MaxAd maxAd, @NonNull MaxError maxError)
             {
+                JamboxLog.Error("Rewarded Display Failed: " + maxError.getMessage());
                 // Rewarded ad failed to display. AppLovin recommends that you load the next ad.
                 rewardedAd.loadAd();
-                if (rewardedAdListener != null) {
+                if (rewardedAdListener != null)
+                {
                     rewardedAdListener.OnAdDisplayFailed();
                 }
             }
         });
         rewardedAd.loadAd();
     }
+
     public static void ShowRewarded(OnRewardedAdListener _rewardedAdListener)
     {
         if (!IsSdkKeyValid()) return;
 
         if (!IsInitialized) {
+            JamboxLog.Warn("Make sure that the SDK is initialized before trying to show ads...");
             if(_rewardedAdListener != null) _rewardedAdListener.OnAdDisplayFailed();
             return;
         };
 
+        //Checking for invalid placement Id
+        if (IsInvalidRewardedId)
+        {
+            ShowInvalidRewardedIDAlert();
+            return;
+        }
+
         rewardedAdListener = null;
-        if (rewardedAd.isReady()) {
+        if (rewardedAd.isReady())
+        {
             rewardedAdListener = _rewardedAdListener;
             rewardedAd.showAd();
-        } else {
+        }
+        else
+        {
+            JamboxLog.Error("Rewarded Ad is not ready");
             if(_rewardedAdListener != null) _rewardedAdListener.OnAdDisplayFailed();
-            if (incentivizedInterstitial != null) {
-                incentivizedInterstitial.show(context, new AppLovinAdRewardListener() {
-                    @Override
-                    public void userRewardVerified(AppLovinAd ad, Map<String, String> response) {
-                        if (rewardedAdListener != null) {
-                            rewardedAdListener.OnAdCompleted();
-                        }
-                    }
-
-                    @Override
-                    public void userOverQuota(AppLovinAd ad, Map<String, String> response) {
-
-                    }
-
-                    @Override
-                    public void userRewardRejected(AppLovinAd ad, Map<String, String> response) {
-
-                    }
-
-                    @Override
-                    public void validationRequestFailed(AppLovinAd ad, int errorCode) {
-
-                    }
-                }, null, new AppLovinAdDisplayListener() {
-                    @Override
-                    public void adDisplayed(AppLovinAd appLovinAd) {
-
-                    }
-
-                    @Override
-                    public void adHidden(AppLovinAd appLovinAd) {
-                        incentivizedInterstitial.preload(null);
-                    }
-                });
-            }
         }
     }
-    public static void ShowRewarded(Context context, OnRewardedAdListener _rewardedAdListener)
+
+    static void ShowInvalidRewardedIDAlert()
     {
-        if (!IsSdkKeyValid()) return;
-
-        if (!IsInitialized) {
-            if(_rewardedAdListener != null) _rewardedAdListener.OnAdDisplayFailed();
-            return;
-        };
-        rewardedAdListener = null;
-        if (rewardedAd.isReady()) {
-            rewardedAdListener = _rewardedAdListener;
-            rewardedAd.showAd();
-        } else {
-            if(_rewardedAdListener != null) _rewardedAdListener.OnAdDisplayFailed();
-            if (incentivizedInterstitial != null) {
-                incentivizedInterstitial.show(context, new AppLovinAdRewardListener() {
-                    @Override
-                    public void userRewardVerified(AppLovinAd ad, Map<String, String> response) {
-                        if (rewardedAdListener != null) {
-                            rewardedAdListener.OnAdCompleted();
-                        }
-                    }
-
-                    @Override
-                    public void userOverQuota(AppLovinAd ad, Map<String, String> response) {
-
-                    }
-
-                    @Override
-                    public void userRewardRejected(AppLovinAd ad, Map<String, String> response) {
-
-                    }
-
-                    @Override
-                    public void validationRequestFailed(AppLovinAd ad, int errorCode) {
-                        if (rewardedAdListener != null) {
-                            rewardedAdListener.OnAdDisplayFailed();
-                        }
-                    }
-                }, null, new AppLovinAdDisplayListener() {
-                    @Override
-                    public void adDisplayed(AppLovinAd appLovinAd) {
-
-                    }
-
-                    @Override
-                    public void adHidden(AppLovinAd appLovinAd) {
-                        incentivizedInterstitial.preload(null);
-                        if (rewardedAdListener != null) {
-                            rewardedAdListener.OnAdHidden();
-                        }
-                    }
-                });
-            }
-        }
+        if (context != null)
+            Toast.makeText(context, "Please double-check the placement Id for Rewarded Ads", Toast.LENGTH_SHORT).show();
+        JamboxLog.Error("Please double-check the placement Id for Rewarded Ads");
     }
     //endregion
 
     //region BANNER
     private static String bannerId;
     private static MaxAdView bannerAdView;
-    public static AppLovinAdView adViewDiscovery;
-    //region BANNER
+    private static boolean IsInvalidBannerId = false;
     public static void ShowBannerAd(BannerPosition position)
     {
         if (!IsSdkKeyValid()) return;
-        if (!IsInitialized) return;
+        if (!IsInitialized)
+        {
+            JamboxLog.Warn("Make sure that the SDK is initialized before trying to show ads...");
+            return;
+        }
 
         if (bannerAdView != null && bannerAdView.isShown())
+        {
+            JamboxLog.Warn("Banner Ad is already being shown");
             return;
+        }
+
+        if (IsInvalidBannerId)
+        {
+            ShowInvalidBannerIDAlert();
+            return;
+        }
 
         bannerAdView = new MaxAdView(bannerId, context);
         bannerAdView.setListener(new MaxAdViewAdListener()
@@ -498,9 +480,20 @@ public class JamboxAdsHelper
             @Override
             public void onAdClicked(@NonNull MaxAd maxAd) { }
             @Override
-            public void onAdLoadFailed(@NonNull String s, @NonNull MaxError maxError) { }
+            public void onAdLoadFailed(@NonNull String s, @NonNull MaxError maxError) {
+                HideBannerAd();
+                JamboxLog.Error("Banner Load Failed: " + maxError.getMessage());
+                if (maxError.getCode() == -5603)
+                {
+                    IsInvalidBannerId = true;
+                    ShowInvalidBannerIDAlert();
+                }
+            }
             @Override
-            public void onAdDisplayFailed(@NonNull MaxAd maxAd, @NonNull MaxError maxError) { }
+            public void onAdDisplayFailed(@NonNull MaxAd maxAd, @NonNull MaxError maxError) {
+                HideBannerAd();
+                JamboxLog.Error("Banner Display Failed: " + maxError.getMessage());
+            }
         });
 
         // Stretch to the width of the screen for banners to be fully functional
@@ -560,9 +553,6 @@ public class JamboxAdsHelper
             public void onAdLoaded(@NonNull MaxAd maxAd) { }
             @Override
             public void onAdDisplayed(@NonNull MaxAd maxAd) {
-                if (adViewDiscovery != null) {
-                    adViewDiscovery.destroy();
-                }
 
             }
             @Override
@@ -571,30 +561,7 @@ public class JamboxAdsHelper
             public void onAdClicked(@NonNull MaxAd maxAd) { }
             @Override
             public void onAdLoadFailed(@NonNull String s, @NonNull MaxError maxError) {
-                AdRequest.Builder builder = new AdRequest.Builder();
-                Bundle bannerExtras = new Bundle();
-                bannerExtras.putString("zone_id", bannerId);
-                builder.addCustomEventExtrasBundle(AppLovinCustomEventBanner.class, bannerExtras);
-
-                boolean isTablet2 = AppLovinSdkUtils.isTablet(context);
-                AppLovinAdSize adSize = isTablet2 ? AppLovinAdSize.LEADER : AppLovinAdSize.BANNER;
-                adViewDiscovery = new AppLovinAdView(adSize, context);
-                AppLovinAdLoadListener loadListener = new AppLovinAdLoadListener() {
-                    @Override
-                    public void adReceived(AppLovinAd ad) {
-
-
-                    }
-
-                    @Override
-                    public void failedToReceiveAd(int errorCode) {
-                        layoutAds.setVisibility(View.GONE);
-
-                    }
-                };
-                adViewDiscovery.setAdLoadListener(loadListener);
-                layoutAds.addView(adViewDiscovery);
-                adViewDiscovery.loadNextAd();
+                layoutAds.setVisibility(View.GONE);
             }
             @Override
             public void onAdDisplayFailed(@NonNull MaxAd maxAd, @NonNull MaxError maxError) { }
@@ -629,6 +596,13 @@ public class JamboxAdsHelper
         return bannerAdView != null && bannerAdView.isShown();
     }
 
+    static void ShowInvalidBannerIDAlert()
+    {
+        if (context != null)
+            Toast.makeText(context, "Please double-check the placement Id for Banner Ads", Toast.LENGTH_SHORT).show();
+        JamboxLog.Error("Please double-check the placement Id for Banner Ads");
+    }
+
     public static int GetBannerHeightInPx()
     {
         int dp = MaxAdFormat.BANNER.getAdaptiveSize( (Activity) context ).getHeight();
@@ -640,6 +614,7 @@ public class JamboxAdsHelper
     private static String nativeId;
     private static MaxNativeAdLoader nativeAdLoader;
     private static MaxAd nativeAd;
+    private static boolean IsInvalidNativeId = false;
 
     public static void InitializeNativeAd(String nativeId)
     {
@@ -647,10 +622,27 @@ public class JamboxAdsHelper
         JamboxAdsHelper.nativeId = nativeId;
     }
 
-    public static void ShowNativeAd(RelativeLayout frameLayout, NativeAdTemplate template)
+
+    public static void ShowNativeAd(FrameLayout frameLayout, NativeAdTemplate template)
     {
         if (!IsSdkKeyValid()) return;
-        if (!IsInitialized) return;
+        if (!IsInitialized)
+        {
+            JamboxLog.Warn("Make sure that the SDK is initialized before trying to show ads...");
+            return;
+        }
+
+        if (nativeId == null || nativeId.isEmpty())
+        {
+            JamboxLog.Warn("Native ID should not be empty");
+            return;
+        }
+
+        if (IsInvalidNativeId)
+        {
+            ShowInvalidNativeIDAlert();
+            return;
+        }
 
         nativeAdLoader = new MaxNativeAdLoader( nativeId, context );
         nativeAdLoader.setNativeAdListener( new MaxNativeAdListener()
@@ -675,6 +667,13 @@ public class JamboxAdsHelper
             @Override
             public void onNativeAdLoadFailed(final String adUnitId, final MaxError error)
             {
+                JamboxLog.Error("Native Load Failed: " + error.getMessage());
+                if (error.getCode() == -5603)
+                {
+                    IsInvalidNativeId = true;
+                    ShowInvalidNativeIDAlert();
+                }
+
                 // We recommend retrying with exponentially higher delays up to a maximum delay
             }
 
@@ -696,11 +695,19 @@ public class JamboxAdsHelper
             nativeAdLoader.destroy( nativeAd );
         }
     }
+
+    static void ShowInvalidNativeIDAlert()
+    {
+        if (context != null)
+            Toast.makeText(context, "Please double-check the placement Id for Native Ads", Toast.LENGTH_SHORT).show();
+        JamboxLog.Error("Please double-check the placement Id for Native Ads");
+    }
     //endregion
 
     //region APP OPEN
     private static MaxAppOpenAd appOpenAd;
     private static String appOpenId;
+    private static boolean IsInvalidAppOpenId = false;
     private static boolean isAppOpenLoading;
     private static boolean showAppOpenOnLoad;
 
@@ -734,12 +741,20 @@ public class JamboxAdsHelper
             @Override
             public void onAdLoadFailed(@NonNull String s, @NonNull MaxError maxError)
             {
+                JamboxLog.Error("AppOpenAd Load Failed: " + maxError.getMessage());
+                if (maxError.getCode() == -5603)
+                {
+                    IsInvalidAppOpenId = true;
+                    ShowInvalidAppOpenIDAlert();
+                }
+
                 isAppOpenLoading = false;
                 showAppOpenOnLoad = false;
             }
             @Override
             public void onAdDisplayFailed(@NonNull MaxAd maxAd, @NonNull MaxError maxError)
             {
+                JamboxLog.Error("AppOpenAd Display Failed: " + maxError.getMessage());
                 isAppOpenLoading = true;
                 appOpenAd.loadAd();
             }
@@ -752,7 +767,18 @@ public class JamboxAdsHelper
     public static void ShowAppOpenAd()
     {
         if (!IsSdkKeyValid()) return;
-        if (appOpenAd == null || !IsInitialized) return;
+        if (appOpenAd == null || !IsInitialized)
+        {
+            JamboxLog.Warn("Make sure that the SDK and AppOpen Ad is initialized before trying to show ads...");
+            return;
+        }
+
+        //Checking for invalid placement Id
+        if (IsInvalidAppOpenId)
+        {
+            ShowInvalidAppOpenIDAlert();
+            return;
+        }
 
         if (appOpenAd.isReady())
         {
@@ -770,6 +796,13 @@ public class JamboxAdsHelper
                 appOpenAd.loadAd();
             }
         }
+    }
+
+    static void ShowInvalidAppOpenIDAlert()
+    {
+        if (context != null)
+            Toast.makeText(context, "Please double-check the placement Id for AppOpen Ads", Toast.LENGTH_SHORT).show();
+        JamboxLog.Error("Please double-check the placement Id for AppOpen Ads");
     }
 
     public enum NativeAdTemplate
@@ -835,4 +868,5 @@ public class JamboxAdsHelper
     public static void RELEASE_MODE(Activity context) {
         AppLovinPrivacySettings.setIsAgeRestrictedUser( true, context );
     }
+
 }

@@ -55,7 +55,7 @@ dependencies {
     implementation("com.applovin.mediation:smaato-adapter:22.6.2.0")
     implementation("com.applovin.mediation:unityads-adapter:4.12.0.0")
     implementation("com.applovin.mediation:verve-adapter:3.0.2.0")
-    implementation("com.applovin.mediation:yandex-adapter:7.1.0.0")
+    implementation("com.applovin.mediation:yandex-adapter:7.2.0.0")
 
     //Adjust
     implementation("com.adjust.sdk:adjust-android:4.38.3")
@@ -83,7 +83,7 @@ afterEvaluate {
             register<MavenPublication>("release") {
                 groupId = "com.github.aliendroid-kim"
                 artifactId = "SDKGames"
-                version = "1.0.14"
+                version = "1.0.15"
 
                 from(components["release"])
 
