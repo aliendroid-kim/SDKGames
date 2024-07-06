@@ -289,8 +289,7 @@ public class JamboxAdsHelper
         }
 
         //Checking for invalid placement Id
-        if (IsInvalidInterstitialId)
-        {
+        if (IsInvalidInterstitialId) {
             ShowInvalidInterstitialIDAlert();
             return;
         }
@@ -300,11 +299,36 @@ public class JamboxAdsHelper
         {
             interstitialAdListener = _interstitialAdListener;
             interstitialAd.showAd();
-        }
-        else
-        {
+        } else {
             JamboxLog.Error("Interstitial Ad is not ready");
         }
+    }
+
+    private static int counter;
+    public static void ShowInterstitial(OnInterstitialAdListener _interstitialAdListener, int interval)
+    {
+        if (!IsSdkKeyValid()) return;
+        if (!IsInitialized) {
+            JamboxLog.Warn("Make sure that the SDK is initialized before trying to show ads...");
+            return;
+        }
+        if (counter>=interval){
+            if (IsInvalidInterstitialId) {
+                ShowInvalidInterstitialIDAlert();
+                return;
+            }
+            interstitialAdListener = null;
+            if (interstitialAd.isReady()) {
+                interstitialAdListener = _interstitialAdListener;
+                interstitialAd.showAd();
+            } else {
+                JamboxLog.Error("Interstitial Ad is not ready");
+            }
+            counter=0;
+        } else {
+            counter++;
+        }
+
     }
 
     static void ShowInvalidInterstitialIDAlert()
